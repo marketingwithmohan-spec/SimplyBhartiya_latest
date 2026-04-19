@@ -30,13 +30,12 @@ next-env.d.ts
 dist/
 dist
 
-# Environment files (comprehensive coverage)
-.env
-.env.*
+# Environment files
+# NOTE: .env files are kept for Emergent's native deployment pipeline.
+# Emergent's GitHub integration strips secrets automatically on push.
+# If pushing manually via git CLI, add .env patterns back before push.
 !.env.example
 !.env.sample
-backend/.env
-frontend/.env
 *token.json*
 *credentials.json*
 
@@ -93,10 +92,7 @@ frontend/node_modules/.cache/default-development/3.pack
 frontend/node_modules/.cache/default-development/4.pack
 frontend/node_modules/.cache/default-development/5.pack
 -e 
-# Environment and credential files
-.env
-.env.*
-*.env
+# Credential files (keeping .env for Emergent deployment)
 credentials.json
 *.pem
 *.key
