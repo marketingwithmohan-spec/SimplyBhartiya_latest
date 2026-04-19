@@ -1,0 +1,126 @@
+{
+  "theme_and_archetype": {
+    "theme": "light",
+    "archetype": "Organic & Earthy with Vibrant Accents",
+    "vibe": "Authentic Indian heritage, trustworthy, organic, modern but grounded."
+  },
+  "color_palette": {
+    "primary": "#1A4331",
+    "primary_hover": "#245A42",
+    "secondary": "#4C8A53",
+    "accent": "#F28C28",
+    "accent_hover": "#D97B20",
+    "background": "#FDFBF7",
+    "surface": "#FFFFFF",
+    "surface_subtle": "#F3F5F1",
+    "text_main": "#121F17",
+    "text_muted": "#56675B",
+    "border": "#D8E0D9",
+    "success": "#22C55E",
+    "warning": "#F59E0B",
+    "error": "#EF4444"
+  },
+  "typography": {
+    "heading_font": "Cormorant Garamond",
+    "body_font": "Work Sans",
+    "data_font": "Outfit",
+    "hierarchy": {
+      "h1": "text-4xl sm:text-5xl tracking-tight font-bold text-primary font-serif",
+      "h2": "text-2xl sm:text-3xl font-semibold text-primary font-serif",
+      "h3": "text-xl font-medium text-text_main font-sans",
+      "body": "text-base text-text_main font-sans leading-relaxed",
+      "data_label": "text-xs tracking-wider uppercase text-text_muted font-semibold",
+      "data_value": "text-lg sm:text-xl font-semibold text-primary font-sans"
+    }
+  },
+  "spacing_and_layout": {
+    "philosophy": "Generous touch targets for mobile staff views; organized dense bento grids for admin dashboard.",
+    "container_padding": "p-4 sm:p-6 lg:p-8",
+    "element_spacing": "gap-4 sm:gap-6",
+    "border_radius": {
+      "card": "rounded-2xl",
+      "button": "rounded-xl",
+      "input": "rounded-lg"
+    }
+  },
+  "components": {
+    "buttons": {
+      "primary": "bg-[#1A4331] text-white hover:bg-[#245A42] transition-colors shadow-sm rounded-xl px-6 py-3 font-medium flex items-center justify-center",
+      "accent": "bg-[#F28C28] text-white hover:bg-[#D97B20] transition-colors shadow-sm rounded-xl px-6 py-3 font-medium",
+      "outline": "border-2 border-[#1A4331] text-[#1A4331] hover:bg-[#F3F5F1] rounded-xl px-6 py-3 font-medium"
+    },
+    "cards": {
+      "dashboard_widget": "bg-white border border-[#D8E0D9] shadow-sm rounded-2xl p-6 transition-all hover:shadow-md",
+      "traceability_stage": "bg-white border-l-4 border-[#4C8A53] shadow-sm rounded-r-2xl rounded-l-sm p-5 mb-4 relative"
+    },
+    "forms": {
+      "input": "w-full border border-[#D8E0D9] rounded-lg p-3 text-[#121F17] focus:ring-2 focus:ring-[#4C8A53] focus:border-transparent outline-none bg-white",
+      "label": "block text-sm font-medium text-[#56675B] mb-1.5"
+    },
+    "data_display": {
+      "status_badge": "px-3 py-1 text-xs font-semibold rounded-full bg-[#F3F5F1] text-[#1A4331] uppercase tracking-wide",
+      "timeline_connector": "absolute left-[1.125rem] top-8 bottom-[-2rem] w-0.5 bg-[#D8E0D9]"
+    }
+  },
+  "views_and_pages": {
+    "admin_dashboard": {
+      "layout": "Grid-based bento layout. 1 col mobile, 3-4 cols desktop.",
+      "features": "Top stat cards (Total Batches, Revenue), main chart area for volume over time, recent batches list.",
+      "filters": "Pill-style toggles for Week/Month/Year at the top right."
+    },
+    "staff_mobile_app": {
+      "layout": "Bottom heavy for reachability. Large FAB for 'Scan QR'.",
+      "ui_elements": "High contrast typography. Hidden price/financial info. Focus purely on operational data entry.",
+      "scanner": "Full-screen camera viewport with a semi-transparent dark overlay and clear central cutout."
+    },
+    "public_traceability": {
+      "hero": "Rich green header with elegant Cormorant Garamond typography. Image of pure seeds or oil. Trust badges (100% Natural, Cold Pressed).",
+      "timeline": "Vertical progression showing: 1) Sourced Farm/Seed, 2) Extraction via Wooden Ghani, 3) Packaging. Use Indian motifs (subtle mandala watermark).",
+      "footer": "Authenticity guarantee, contact info, brand story."
+    },
+    "qr_print_template": {
+      "layout": "Print-optimized CSS (@media print). White background, crisp black QR code, 'Simply Bhartiya' logo header, Batch ID text below."
+    }
+  },
+  "media_urls": {
+    "logo": {
+      "url": "https://customer-assets.emergentagent.com/job_bhartiya-trace/artifacts/ny91w2mk_Simply%20Bhartiya%20logo%20Sticker.png",
+      "description": "Simply Bhartiya Logo. CRITICAL: Do NOT use the rounded rectangle border. If possible, use CSS mask or clip-path to feature only the core peacock and text.",
+      "category": "brand"
+    },
+    "hero_backgrounds": [
+      {
+        "url": "https://images.pexels.com/photos/18346906/pexels-photo-18346906.jpeg",
+        "description": "Macro shot of mixed mustard seeds. Great for procurement stage header or public page hero background (darkened with an overlay).",
+        "category": "background"
+      },
+      {
+        "url": "https://images.pexels.com/photos/18697673/pexels-photo-18697673.jpeg",
+        "description": "Textured mustard seeds, warm tones. Suitable for decorative cards or authenticity proof on traceability page.",
+        "category": "texture"
+      }
+    ]
+  },
+  "visual_enhancers": {
+    "indian_motifs": "Use CSS-based subtle repeating geometric patterns or SVG path decorations in headers and footers with very low opacity (5%).",
+    "borders": "Instead of plain borders, consider using a double thin-line border (1px solid + 1px dashed inside) for premium Indian heritage feel on key cards."
+  },
+  "testing_attributes": {
+    "convention": "data-testid='[page]-[component]-[action]'",
+    "examples": [
+      "data-testid='login-submit-button'",
+      "data-testid='admin-export-excel'",
+      "data-testid='staff-scan-qr'",
+      "data-testid='traceability-timeline'"
+    ]
+  },
+  "instructions_to_main_agent": [
+    "Build the application using React and Tailwind CSS as a mobile-first PWA. All javascript should be in .js/.jsx, not typescript.",
+    "Strictly follow the color palette provided, avoiding ANY use of purple, violet, or unrelated gradients.",
+    "Use 'Cormorant Garamond' for elegant headings (especially on public pages) and 'Outfit' or 'Work Sans' for dense dashboards/mobile forms.",
+    "Implement Shadcn UI components for complex interfaces but manually override colors and spacing classes to match these guidelines.",
+    "Ensure all interactive elements have data-testid attributes.",
+    "Use browser-compatible JS/CSS for mobile QR scanning implementation (e.g., html5-qrcode library or similar).",
+    "For the printable QR code feature, create a dedicated route or hidden print div that strips out UI elements and shows only the logo, QR code, and batch text via @media print CSS rules."
+  ]
+}
