@@ -318,7 +318,10 @@ async def analytics(period: Literal["week", "month", "year"] = "month", user=Dep
     else:
         since = now - timedelta(days=365)
 
-    cursor = db.batches.find({"created_at": {"$gte": since.isoformat()}}, {"_id": 0})
+    cursor = db.batches.find(
+        {"created_at": {"$gte": since.isoformat()}},
+        {"_id": 0, "seed_type": 1, "stage": 1, "created_at": 1, "total_quantity_kg": 1, "total_amount": 1},
+    )
     batches = await cursor.to_list(5000)
 
     total_batches = len(batches)
@@ -352,9 +355,13 @@ async def analytics(period: Literal["week", "month", "year"] = "month", user=Dep
 # ============ EXCEL EXPORT ============
 @api_router.get("/export/excel")
 async def export_excel(user=Depends(require_admin)):
-    cursor = db.batches.find({}, {"_id": 0}).sort("created_at", -1)
-    batches = await cursor.to_list(10000)
-
+    # Project only fields used in the export (strips unused nested data)
+    projection = {
+        "_id": 0, "batch_id": 1, "seed_type": 1, "vendor_name": 1, "area_pin": 1,
+        "price_per_kg": 1, "number_of_bags": 1, "size_per_bag": 1,
+        "total_quantity_kg": 1, "total_amount": 1,
+        "procurement_date": 1, "stage": 1, "stage2": 1, "stage3": 1,
+    }
     wb = openpyxl.Workbook()
     ws = wb.active
     ws.title = "Batches"
@@ -366,7 +373,10 @@ async def export_excel(user=Depends(require_admin)):
         "Packer", "Packaging Capacity", "Packaging Date",
     ]
     ws.append(headers)
-    for b in batches:
+
+    # Stream results row-by-row to avoid loading all documents into memory at once
+    cursor = db.batches.find({}, projection).sort("created_at", -1)
+    async for b in cursor:
         s2 = b.get("stage2") or {}
         s3 = b.get("stage3") or {}
         ws.append([
