@@ -4,16 +4,26 @@ import { ProtectedLayout } from "../components/ProtectedLayout";
 import { Html5Qrcode, Html5QrcodeScannerState } from "html5-qrcode";
 import api from "../lib/api";
 import { toast } from "sonner";
-import { ScanLine, Camera, StopCircle, Keyboard } from "lucide-react";
+import { ScanLine, Camera, StopCircle, Keyboard, ExternalLink, AlertTriangle } from "lucide-react";
 
 const READER_ID = "qr-reader";
+
+const isInIframe = () => {
+  try { return window.self !== window.top; } catch { return true; }
+};
 
 export default function ScanPage() {
   const navigate = useNavigate();
   const [scanning, setScanning] = useState(false);
   const [manualId, setManualId] = useState("");
+  const [iframeBlocked, setIframeBlocked] = useState(false);
   const scannerRef = useRef(null);
   const handledRef = useRef(false);
+
+  useEffect(() => {
+    // Detect if we're in an iframe without camera permission policy
+    if (isInIframe()) setIframeBlocked(true);
+  }, []);
 
   useEffect(() => {
     return () => {
@@ -77,6 +87,35 @@ export default function ScanPage() {
   const startScan = async () => {
     if (scanning) return;
     handledRef.current = false;
+
+    // Pre-flight: explicitly request camera permission to trigger browser prompt.
+    // This gives a clearer error than html5-qrcode's internal failure.
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      toast.error("Camera API not supported in this browser");
+      return;
+    }
+    try {
+      const preStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
+      // Stop the preflight stream immediately — html5-qrcode will open its own
+      preStream.getTracks().forEach((t) => t.stop());
+    } catch (err) {
+      const name = err?.name || "";
+      if (name === "NotAllowedError" || name === "SecurityError") {
+        if (iframeBlocked) {
+          toast.error("This preview blocks the camera. Tap ‘Open in new tab’ above to scan.", { duration: 6000 });
+        } else {
+          toast.error("Camera permission denied. Enable camera access in browser settings.", { duration: 6000 });
+        }
+      } else if (name === "NotFoundError" || name === "OverconstrainedError") {
+        toast.error("No camera found. Use manual entry below.");
+      } else if (name === "NotReadableError") {
+        toast.error("Camera is in use by another app.");
+      } else {
+        toast.error("Could not access camera: " + (err?.message || name));
+      }
+      return;
+    }
+
     setScanning(true);
     // Wait a tick so React renders the empty reader div before html5-qrcode grabs it
     await new Promise((r) => setTimeout(r, 50));
@@ -96,14 +135,7 @@ export default function ScanPage() {
     } catch (err) {
       await safeStop();
       setScanning(false);
-      const msg = err?.message || String(err);
-      if (/permission|denied|NotAllowed/i.test(msg)) {
-        toast.error("Camera permission denied. Use manual entry below.");
-      } else if (/NotFound|requested device/i.test(msg)) {
-        toast.error("No camera found on this device.");
-      } else {
-        toast.error("Could not start camera: " + msg);
-      }
+      toast.error("Could not start scanner: " + (err?.message || String(err)));
     }
   };
 
@@ -127,6 +159,27 @@ export default function ScanPage() {
           <h1 className="font-serif text-4xl sm:text-5xl font-bold text-[#1A4331] tracking-tight">Scan Batch QR</h1>
           <p className="text-[#56675B] mt-1 text-sm">Point your camera at a batch QR to continue production</p>
         </div>
+
+        {iframeBlocked && (
+          <div className="mb-4 bg-[#FFF8E7] border border-[#F28C28]/40 rounded-xl p-4 flex items-start gap-3" data-testid="iframe-warning">
+            <AlertTriangle className="text-[#D97B20] flex-shrink-0 mt-0.5" size={20} />
+            <div className="flex-1 text-sm">
+              <div className="font-semibold text-[#1A4331]">Camera blocked in preview</div>
+              <p className="text-[#56675B] mt-0.5">
+                This page is embedded in a preview that blocks the camera. Open it in a new tab (or on your phone) to enable scanning.
+              </p>
+              <a
+                href={window.location.href}
+                target="_blank"
+                rel="noopener noreferrer"
+                data-testid="scan-open-new-tab"
+                className="inline-flex items-center gap-1.5 mt-2 text-sm font-medium text-[#F28C28] hover:text-[#D97B20]"
+              >
+                Open in new tab <ExternalLink size={14} />
+              </a>
+            </div>
+          </div>
+        )}
 
         <div className="bg-white border border-[#D8E0D9] rounded-2xl p-6 card-elevate">
           <div className="relative rounded-xl overflow-hidden bg-[#F3F5F1] min-h-[280px]">
