@@ -1,79 +1,114 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ProtectedLayout } from "../components/ProtectedLayout";
-import { Html5Qrcode } from "html5-qrcode";
+import { Html5Qrcode, Html5QrcodeScannerState } from "html5-qrcode";
 import api from "../lib/api";
 import { toast } from "sonner";
 import { ScanLine, Camera, StopCircle, Keyboard } from "lucide-react";
+
+const READER_ID = "qr-reader";
 
 export default function ScanPage() {
   const navigate = useNavigate();
   const [scanning, setScanning] = useState(false);
   const [manualId, setManualId] = useState("");
   const scannerRef = useRef(null);
-  const elementIdRef = useRef("qr-reader");
+  const handledRef = useRef(false);
 
   useEffect(() => {
     return () => {
-      // cleanup
-      if (scannerRef.current) {
-        scannerRef.current.stop().catch(() => {}).finally(() => scannerRef.current = null);
+      // Cleanup on unmount — guard against double-stop
+      const s = scannerRef.current;
+      if (s) {
+        try {
+          const state = s.getState();
+          if (
+            state === Html5QrcodeScannerState.SCANNING ||
+            state === Html5QrcodeScannerState.PAUSED
+          ) {
+            s.stop().then(() => s.clear()).catch(() => {});
+          } else {
+            try { s.clear(); } catch {}
+          }
+        } catch {}
+        scannerRef.current = null;
       }
     };
   }, []);
 
+  const safeStop = async () => {
+    const s = scannerRef.current;
+    if (!s) return;
+    try {
+      const state = s.getState();
+      if (
+        state === Html5QrcodeScannerState.SCANNING ||
+        state === Html5QrcodeScannerState.PAUSED
+      ) {
+        await s.stop();
+      }
+      try { s.clear(); } catch {}
+    } catch {}
+    scannerRef.current = null;
+  };
+
   const parseAndRoute = async (decoded) => {
-    // Accept formats: "SB|<batchId>|S<stage>", full URL with /trace/<id>, or plain batch_id
-    let batchId = decoded.trim();
-    if (batchId.startsWith("SB|")) {
-      const parts = batchId.split("|");
-      batchId = parts[1];
-    } else if (batchId.includes("/trace/")) {
-      batchId = batchId.split("/trace/")[1].split(/[?#]/)[0];
-    }
+    if (handledRef.current) return;
+    handledRef.current = true;
+    let batchId = (decoded || "").trim();
+    if (batchId.startsWith("SB|")) batchId = batchId.split("|")[1];
+    else if (batchId.includes("/trace/")) batchId = batchId.split("/trace/")[1].split(/[?#]/)[0];
     if (!batchId) {
       toast.error("Could not read QR");
+      handledRef.current = false;
       return;
     }
     try {
       const { data } = await api.get(`/batches/${batchId}`);
-      // Route by current stage
       if (data.stage === 1) navigate(`/batch/${batchId}/stage2`);
       else if (data.stage === 2) navigate(`/batch/${batchId}/stage3`);
       else navigate(`/batch/${batchId}`);
     } catch (e) {
       toast.error(e?.response?.data?.detail || "Batch not found");
+      handledRef.current = false;
     }
   };
 
   const startScan = async () => {
     if (scanning) return;
+    handledRef.current = false;
     setScanning(true);
+    // Wait a tick so React renders the empty reader div before html5-qrcode grabs it
+    await new Promise((r) => setTimeout(r, 50));
     try {
-      const html5QrCode = new Html5Qrcode(elementIdRef.current);
-      scannerRef.current = html5QrCode;
-      await html5QrCode.start(
+      const instance = new Html5Qrcode(READER_ID, { verbose: false });
+      scannerRef.current = instance;
+      await instance.start(
         { facingMode: "environment" },
         { fps: 10, qrbox: { width: 250, height: 250 } },
         async (decoded) => {
-          await html5QrCode.stop();
-          scannerRef.current = null;
+          await safeStop();
           setScanning(false);
           parseAndRoute(decoded);
         },
         () => {}
       );
     } catch (err) {
+      await safeStop();
       setScanning(false);
-      toast.error("Camera access denied or unavailable");
+      const msg = err?.message || String(err);
+      if (/permission|denied|NotAllowed/i.test(msg)) {
+        toast.error("Camera permission denied. Use manual entry below.");
+      } else if (/NotFound|requested device/i.test(msg)) {
+        toast.error("No camera found on this device.");
+      } else {
+        toast.error("Could not start camera: " + msg);
+      }
     }
   };
 
   const stopScan = async () => {
-    if (scannerRef.current) {
-      try { await scannerRef.current.stop(); } catch {}
-      scannerRef.current = null;
-    }
+    await safeStop();
     setScanning(false);
   };
 
@@ -94,11 +129,13 @@ export default function ScanPage() {
         </div>
 
         <div className="bg-white border border-[#D8E0D9] rounded-2xl p-6 card-elevate">
-          <div id={elementIdRef.current} className="min-h-[250px] bg-[#F3F5F1] rounded-xl flex items-center justify-center" data-testid="qr-reader-container">
+          <div className="relative rounded-xl overflow-hidden bg-[#F3F5F1] min-h-[280px]">
+            {/* Reader container must remain empty so html5-qrcode can own the DOM safely */}
+            <div id={READER_ID} data-testid="qr-reader-container" className="w-full" />
             {!scanning && (
-              <div className="text-center p-8">
-                <Camera className="mx-auto text-[#4C8A53] mb-2" size={48} />
-                <p className="text-sm text-[#56675B]">Camera preview will appear here</p>
+              <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none p-6 text-center">
+                <Camera className="text-[#4C8A53] mb-2" size={48} />
+                <p className="text-sm text-[#56675B]">Tap “Start Camera” to scan a QR code</p>
               </div>
             )}
           </div>
