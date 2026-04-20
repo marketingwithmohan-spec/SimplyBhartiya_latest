@@ -28,9 +28,28 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 # MongoDB connection
-mongo_url = os.environ['MONGO_URL']
+
+# --- MongoDB Connection Settings ---
+# Get values from Render Environment Variables
+mongo_url = os.environ.get('MONGO_URL')
+db_name = os.environ.get('DB_NAME')
+
+if not mongo_url or not db_name:
+    raise ValueError("CRITICAL: MONGO_URL or DB_NAME is missing in Render Environment!")
+
+# Initialize Client
 client = AsyncIOMotorClient(mongo_url)
-db = client[os.environ['DB_NAME']]
+db = client[db_name]
+
+# Define your collection (This is the line you were missing!)
+inventory_collection = db["inventory"]
+
+
+#mongo_url = os.environ['MONGO_URL']
+#client = AsyncIOMotorClient(mongo_url)
+#db = client[os.environ['DB_NAME']]
+
+
 
 # JWT config
 JWT_SECRET = os.environ.get('JWT_SECRET', 'simply-bhartiya-secret-key-change-in-prod')
