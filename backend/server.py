@@ -1,4 +1,4 @@
-from fastapi import FastAPI, APIRouter, HTTPException, Depends, Query
+from fastapi import FastAPI, APIRouter, HTTPException, Depends, Query, Request
 from fastapi.responses import StreamingResponse, Response
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from dotenv import load_dotenv
@@ -263,19 +263,30 @@ async def update_stage3(batch_id: str, data: Stage3Update, user=Depends(get_curr
 
 
 @api_router.get("/batches/{batch_id}/qr/{stage}")
-async def get_qr_png(batch_id: str, stage: int, user=Depends(get_current_user)):
+async def get_qr_png(batch_id: str, stage: int, request: Request, user=Depends(get_current_user)):
     batch = await db.batches.find_one({"batch_id": batch_id}, {"_id": 0})
     if not batch:
         raise HTTPException(status_code=404, detail="Batch not found")
     if stage not in (1, 2, 3):
         raise HTTPException(status_code=400, detail="Invalid stage")
 
-    # QR payload: internal scanning uses batch_id + stage marker; public uses URL
+    # Stage 3 QR embeds the PUBLIC customer-trace URL so a phone camera opens it directly.
+    # URL resolution order:
+    #   1. PUBLIC_TRACE_URL env (explicit override — use in production)
+    #   2. Origin header from the request (works when admin opens /api/batches/.. on same host as frontend)
+    #   3. request.base_url (fallback)
     if stage == 3:
-        public_url = os.environ.get("PUBLIC_TRACE_URL", "") or ""
-        # If not configured, frontend URL is typically derived from the origin.
-        # We pass a relative trace path as fallback that the client must prepend origin.
-        payload = public_url.rstrip("/") + f"/trace/{batch_id}" if public_url else f"/trace/{batch_id}"
+        public_url = os.environ.get("PUBLIC_TRACE_URL", "").strip()
+        if not public_url:
+            origin = request.headers.get("origin") or request.headers.get("referer") or ""
+            if origin:
+                # Strip path from referer to keep only scheme://host
+                from urllib.parse import urlparse
+                parsed = urlparse(origin)
+                public_url = f"{parsed.scheme}://{parsed.netloc}"
+            else:
+                public_url = str(request.base_url).rstrip("/")
+        payload = f"{public_url.rstrip('/')}/trace/{batch_id}"
     else:
         payload = f"SB|{batch_id}|S{stage}"
 

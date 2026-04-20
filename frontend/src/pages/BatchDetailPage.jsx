@@ -5,6 +5,7 @@ import { useAuth } from "../contexts/AuthContext";
 import api, { API } from "../lib/api";
 import { toast } from "sonner";
 import { Loader2, Printer, CheckCircle2, Circle, ExternalLink, Cog, Package } from "lucide-react";
+import { QRCodeCanvas } from "qrcode.react";
 
 const LOGO_URL =
   "https://customer-assets.emergentagent.com/job_bhartiya-trace/artifacts/ny91w2mk_Simply%20Bhartiya%20logo%20Sticker.png";
@@ -205,22 +206,27 @@ const TimelineStage = ({ stage, active, title, icon: Icon, date, details, last, 
 );
 
 const QRModal = ({ batchId, stage, onClose, seedType, pin }) => {
-  const [qrUrl, setQrUrl] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [qrBlobUrl, setQrBlobUrl] = useState(null);
+  const [loading, setLoading] = useState(stage !== 3);
+
+  // Stage 3 = customer-facing bottle QR. Rendered client-side so it always encodes
+  // the exact public URL visible in the browser (no server-side guessing).
+  const publicTraceUrl = stage === 3 ? `${window.location.origin}/trace/${batchId}` : null;
 
   useEffect(() => {
+    if (stage === 3) return; // client-rendered, no API call needed
+    setLoading(true);
     (async () => {
-      setLoading(true);
       try {
         const res = await api.get(`/batches/${batchId}/qr/${stage}`, { responseType: "blob" });
-        setQrUrl(URL.createObjectURL(res.data));
+        setQrBlobUrl(URL.createObjectURL(res.data));
       } catch (e) {
         toast.error("Failed to load QR");
       } finally {
         setLoading(false);
       }
     })();
-    return () => qrUrl && URL.revokeObjectURL(qrUrl);
+    return () => qrBlobUrl && URL.revokeObjectURL(qrBlobUrl);
     // eslint-disable-next-line
   }, [batchId, stage]);
 
@@ -236,15 +242,31 @@ const QRModal = ({ batchId, stage, onClose, seedType, pin }) => {
             <div className="text-xs uppercase tracking-widest text-[#56675B] font-medium">Stage {stage} — {stageLabels[stage]}</div>
           </div>
           <div className="p-6 flex flex-col items-center">
-            {loading ? (
+            {stage === 3 ? (
+              <div className="p-3 bg-white" data-testid="qr-image">
+                <QRCodeCanvas
+                  value={publicTraceUrl}
+                  size={256}
+                  level="H"
+                  includeMargin={false}
+                  fgColor="#1A4331"
+                />
+              </div>
+            ) : loading ? (
               <Loader2 className="animate-spin text-[#4C8A53]" size={40} />
             ) : (
-              <img src={qrUrl} alt="QR" className="w-64 h-64" data-testid="qr-image" />
+              <img src={qrBlobUrl} alt="QR" className="w-64 h-64" data-testid="qr-image" />
             )}
             <div className="mt-4 text-center">
               <div className="text-xs uppercase tracking-wider text-[#56675B] font-semibold">Batch ID</div>
               <div className="font-data text-sm font-bold text-[#1A4331] break-all">{batchId}</div>
               <div className="text-xs text-[#56675B] mt-1">{seedType} · PIN {pin}</div>
+              {stage === 3 && (
+                <div className="mt-3 pt-3 border-t border-dashed border-[#D8E0D9]">
+                  <div className="text-[10px] uppercase tracking-widest text-[#56675B] font-semibold mb-1">Scan opens</div>
+                  <div className="font-data text-[11px] text-[#4C8A53] break-all">{publicTraceUrl}</div>
+                </div>
+              )}
             </div>
           </div>
         </div>
