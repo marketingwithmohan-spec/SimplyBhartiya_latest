@@ -30,24 +30,27 @@ logger = logging.getLogger(__name__)
 # MongoDB connection
 
 # --- MongoDB Connection Settings ---
-# Get values from Render Environment Variables
 mongo_url = os.environ.get('MONGO_URL')
 db_name = os.environ.get('DB_NAME')
 
-if not mongo_url or not db_name:
-    raise ValueError("CRITICAL: MONGO_URL or DB_NAME is missing in Render Environment!")
+# Detailed Logging for Debugging
+if not mongo_url:
+    print("LOG: MONGO_URL is missing from Environment Variables!")
+if not db_name:
+    print("LOG: DB_NAME is missing from Environment Variables!")
 
-# Initialize Client
-client = AsyncIOMotorClient(mongo_url)
-db = client[db_name]
-
-# Define your collection (This is the line you were missing!)
-inventory_collection = db["inventory"]
-
-
-#mongo_url = os.environ['MONGO_URL']
-#client = AsyncIOMotorClient(mongo_url)
-#db = client[os.environ['DB_NAME']]
+# Instead of raising a ValueError immediately, let's try to connect
+# This prevents the "Status 1" crash from happening too fast to read logs
+try:
+    client = AsyncIOMotorClient(mongo_url) if mongo_url else None
+    if client:
+        db = client[db_name]
+        inventory_collection = db["inventory"]
+        print(f"LOG: MongoDB client initialized for database: {db_name}")
+    else:
+        print("LOG: MongoDB client could not be initialized.")
+except Exception as e:
+    print(f"LOG: Unexpected error during MongoDB init: {e}")
 
 
 
