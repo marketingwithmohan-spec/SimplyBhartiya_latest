@@ -446,6 +446,14 @@ async def export_excel(user=Depends(require_admin)):
 # ============ SEED / STARTUP ============
 @app.on_event("startup")
 async def seed_users():
+    # Add this line to tell the function to use the global 'db' variable  global db 
+   
+    
+    if db is None:
+        print("LOG: Skipping seed_users because db is not initialized.")
+        return
+
+    existing = await db.users.count_documents({})
     # Idempotent: only create if missing
     existing = await db.users.count_documents({})
     if existing == 0:
